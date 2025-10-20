@@ -37,14 +37,14 @@ Let's create our project. For this example, we'll create a simple `len` command 
 First off, we'll create our plugin:
 
 ```sh
-> cargo new nu_plugin_len
-> cd nu_plugin_len
+cargo new nu_plugin_len
+cd nu_plugin_len
 ```
 
 Next, we'll add `nu` to our project's dependencies.
 
 ```sh
-> cargo add nu-plugin nu-protocol
+cargo add nu-plugin nu-protocol
 ```
 
 The `Cargo.toml` file should now look something like the following.
@@ -53,11 +53,11 @@ The `Cargo.toml` file should now look something like the following.
 [package]
 name = "nu_plugin_len"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-nu-plugin = "0.92.0" # These version numbers may differ
-nu-protocol = "0.92.0"
+nu-plugin = "0.104.0"
+nu-protocol = "0.104.0"
 ```
 
 With this, we can open up `src/main.rs` and create our plugin.
@@ -90,7 +90,7 @@ impl SimplePluginCommand for Len {
         "len"
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "calculates the length of its input"
     }
 
@@ -160,7 +160,7 @@ impl SimplePluginCommand for Len {
         "len"
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "calculates the length of its input"
     }
 
@@ -173,7 +173,7 @@ impl SimplePluginCommand for Len {
 }
 ```
 
-There are a few methods required for this implementation. We first define the `name` of the command, which is what the user will type at the prompt or in their script to run the command. The `usage` is also required, which is a short documentation string for users to know what the command does, and is displayed along with completions and in `help`. Finally, we define the `signature`, which specifies arguments and types for the command.
+There are a few methods required for this implementation. We first define the `name` of the command, which is what the user will type at the prompt or in their script to run the command. The `description` is also required, which is a short documentation string for users to know what the command does, and is displayed along with completions and in `help`. Finally, we define the `signature`, which specifies arguments and types for the command.
 
 We tell Nu that the name is "len", give it a basic description for `help` to display and declare that we expect to be passed a string and will return an integer.
 
@@ -254,7 +254,7 @@ Here we import everything we need -- types and functions -- to be able to create
 Once we have finished our plugin, to use it all we need to do is install it.
 
 ```nu
-> cargo install --path .
+> cargo install --path . --locked
 # nushell only (run with `nu -c` if not in nushell)
 > plugin add ~/.cargo/bin/nu_plugin_len # add .exe on Windows
 ```
@@ -267,21 +267,21 @@ If you're already running `nu` during the installation process of your plugin, e
 
 Once `nu` starts up, it will discover the plugin and add its commands to the scope.
 
-```
-> nu
-> "hello" | len
-5
-> help len
-calculates the length of its input
-
-Usage:
-  > len
-
-Flags:
-  -h, --help - Display the help message for this command
-
-Signatures:
-  <string> | len -> <int>
+```nu
+nu
+"hello" | len
+# => 5
+help len
+# => calculates the length of its input
+# => 
+# => Usage:
+# =>   > len
+# => 
+# => Flags:
+# =>   -h, --help - Display the help message for this command
+# => 
+# => Signatures:
+# =>   <string> | len -> <int>
 ```
 
 Run `plugin list` to see all plugins currently registered and available to this Nu session, including whether or not they are running, and their process ID if so.
@@ -328,27 +328,20 @@ impl PluginCommand for Len {
                     Value::int(length as i64, call.head).into_pipeline_data()
                 )
             },
-            input => {
-                // Handle a string
-                let span = input.span().unwrap_or(call.head);
-                let value = input.into_value(span);
-                match &value {
-                    Value::String { val, .. } => Ok(
-                        Value::int(val.len() as i64, value.span()).into_pipeline_data()
+            PipelineData::Value(Value::String { val, .. }, _) => {
+                Ok(Value::int(val.len() as i64, call.head).into_pipeline_data())
+            },
+            _ => Err(
+                LabeledError::new(
+                    "Expected String or iterable input from pipeline",
+                ).with_label(
+                    format!(
+                        "requires string or iterable input; got {}",
+                        input.get_type(),
                     ),
-                    _ => Err(
-                        LabeledError::new(
-                            "Expected String or iterable input from pipeline",
-                        ).with_label(
-                            format!(
-                                "requires string or iterable input; got {}",
-                                value.get_type(),
-                            ),
-                            call.head,
-                        )
-                    ),
-                }
-            }
+                    call.head,
+                )
+            ),
         }
     }
 }
@@ -365,8 +358,13 @@ Since `run()` also returns `PipelineData`, it is also possible for the plugin to
 two:
 
 ```rust
-fn run(..., input: PipelineData) -> Result<PipelineData, ShellError> {
-    Ok(input.map(|value| {
+fn run(
+    ..., 
+    engine: &EngineInterface,
+    call: &EvaluatedCall,
+    input: PipelineData,
+) -> Result<PipelineData, ShellError> {
+    input.map(|value| {
         let span = value.span();
         match value.as_int() {
             Ok(int) => Value::int(int * 2, span),
@@ -375,14 +373,24 @@ fn run(..., input: PipelineData) -> Result<PipelineData, ShellError> {
             // `Value::Error`.
             Err(err) => Value::error(err, span),
         }
-    }))
+    }, engine.signals()).map_err(|e|
+        LabeledError::new(
+            "Failed",
+        ).with_label(
+            format!(
+                "Failed; {}",
+                e,
+            ),
+            call.head,
+        )
+    )
 }
 ```
 
 Since the input and output are both streaming, this will work even on an infinite stream:
 
 ```nu
-$ generate 0 { |n| {out: $n, next: ($n + 1)} } | plugin
+$ generate { |n| {out: $n, next: ($n + 1)} } 0 | plugin
 0
 2
 4
@@ -432,7 +440,7 @@ impl SimplePluginCommand for Motd {
         "motd"
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Message of the day"
     }
 
@@ -474,6 +482,8 @@ Example:
 Nushell rocks!
 ```
 
+For a full example, see [`nu_plugin_example`](https://github.com/nushell/plugin-examples/tree/main/rust/nu_plugin_example).
+
 ## Evaluating closures
 
 Plugins can accept and evaluate closures using [`EngineInterface::eval_closure`](https://docs.rs/nu-plugin/latest/nu_plugin/struct.EngineInterface.html#method.eval_closure) or [`eval_closure_with_stream`](https://docs.rs/nu-plugin/latest/nu_plugin/struct.EngineInterface.html#method.eval_closure_with_stream).
@@ -505,7 +515,7 @@ impl PluginCommand for MyEach {
         "my-each"
     }
 
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "Run closure on each element of a list"
     }
 
@@ -899,7 +909,7 @@ $ ./target/release/nu_plugin_len --stdio
 json{"Hello":{"protocol":"nu-plugin","version":"0.90.2","features":[]}}
 {"Hello":{"protocol":"nu-plugin","version":"0.90.2","features":[]}}
 {"Call":[0,"Signature"]}
-{"CallResponse":[0, {"Signature":[{"sig":{"name":"len","usage":"calculates the length of its input","extra_usage":"","search_terms":[],"required_positional":[],"optional_positional":[],"rest_positional":null,"vectorizes_over_list":false,"named":[{"long":"help","short":"h","arg":null,"required":false,"desc":"Display the help message for this command","var_id":null,"default_value":null}],"input_type":"String","output_type":"Int","input_output_types":[],"allow_variants_without_examples":false,"is_filter":false,"creates_scope":false,"allows_unknown_args":false,"category":"Default"},"examples":[]}]}]}
+{"CallResponse":[0, {"Signature":[{"sig":{"name":"len","description":"calculates the length of its input","extra_description":"","search_terms":[],"required_positional":[],"optional_positional":[],"rest_positional":null,"vectorizes_over_list":false,"named":[{"long":"help","short":"h","arg":null,"required":false,"desc":"Display the help message for this command","var_id":null,"default_value":null}],"input_type":"String","output_type":"Int","input_output_types":[],"allow_variants_without_examples":false,"is_filter":false,"creates_scope":false,"allows_unknown_args":false,"category":"Default"},"examples":[]}]}]}
 ```
 
 The plugin prints its signature serialized as JSON. We'll reformat for readability.
@@ -910,8 +920,8 @@ The plugin prints its signature serialized as JSON. We'll reformat for readabili
     {
       "sig": {
         "name": "len",
-        "usage": "calculates the length of its input",
-        "extra_usage": "",
+        "description": "calculates the length of its input",
+        "extra_description": "",
         "search_terms": [],
         "required_positional": [],
         "optional_positional": [],
@@ -1020,8 +1030,8 @@ def signature():
     return {
         "sig": {
             "name": "len",
-            "usage": "calculates the length of its input",
-            "extra_usage": "",
+            "description": "calculates the length of its input",
+            "extra_description": "",
             "search_terms": [],
             "required_positional": [],
             "optional_positional": [],
@@ -1112,7 +1122,7 @@ if __name__ == "__main__":
             break
         elif "Call" in input:
             [id, call] = input["Call"]
-            if plugin_call == "Metadata":
+            if call == "Metadata":
                 send_response(id, {
                     "Metadata": {
                         "version": "0.1.0",
@@ -1145,7 +1155,7 @@ if __name__ == "__main__":
             break
         elif "Call" in input:
             [id, call] = input["Call"]
-            if plugin_call == "Metadata":
+            if call == "Metadata":
                 send_response(id, {
                     "Metadata": {
                         "version": "0.1.0",

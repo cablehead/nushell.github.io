@@ -11,28 +11,63 @@ Here's a simple example:
 
 ```nu
 # Completion command
-> def animals [] { ["cat", "dog", "eel" ] }
+def animals [] { ["cat", "dog", "eel" ] }
 # Command to be completed
-> def my-command [animal: string@animals] { print $animal }
->| my-command
-cat                 dog                 eel
+def my-command [animal: string@animals] { print $animal }
+my-command
+# => cat                 dog                 eel
 ```
 
 The first line defines a custom command which returns a list of three different animals. These are the possible values for the completion.
 
 ::: tip
-The completion command must return a Nushell `list` of the possible completion values. If a completer does not return a valid list, the default completer will be used. The default completer returns a list of files and subdirectories of the current directory.
-
 To suppress completions for an argument (for example, an `int` that can accept any integer), define a completer that returns an empty list (`[ ]`).
 :::
 
-In the second line of the example above, `string@animals` tells Nushell two things—the shape of the argument for type-checking and the completer which will suggest possible values for the argument.
+In the second line, `string@animals` tells Nushell two things—the shape of the argument for type-checking and the completer which will suggest possible values for the argument.
 
 The third line is demonstration of the completion. Type the name of the custom command `my-command`, followed by a space, and then the <kbd>Tab</kbd> key. This displays a menu with the possible completions. Custom completions work the same as other completions in the system, allowing you to type `e` followed by the <kbd>Tab</kbd> key to complete "eel" automatically.
 
 ::: tip
-When the completion menu is displayed, the prompt changes to include the `|` character by default. This can be changed using `$env.config.menus.marker`.
+When the completion menu is displayed, the prompt changes to include the `|` character by default. To change the prompt marker, modify the `marker` value of the record, where the `name` key is `completion_menu`, in the `$env.config.menus` list. See also [the completion menu configuration](/book/line_editor.md#completion-menu).
 :::
+
+::: tip
+To fall back to Nushell's built-in file completions, return `null` rather than a list of suggestions.
+:::
+
+## Options for Custom Completions
+
+If you want to choose how your completions are filtered and sorted, you can also return a record rather than a list. The list of completion suggestions should be under the `completions` key of this record. Optionally, it can also have, under the `options` key, a record containing the following optional settings:
+
+- `sort` - Set this to `false` to stop Nushell from sorting your completions. By default, this is `true`, and completions are sorted according to `$env.config.completions.sort`.
+- `case_sensitive` - Set to `true` for the custom completions to be matched case sensitively, `false` otherwise. Used for overriding `$env.config.completions.case_sensitive`.
+- `completion_algorithm` - Set this to `prefix`, `substring`, or `fuzzy` to choose how your completions are matched against the typed text. Used for overriding `$env.config.completions.algorithm`.
+
+Here's an example demonstrating how to set these options:
+
+```nu
+def animals [] {
+    {
+        options: {
+            case_sensitive: false,
+            completion_algorithm: substring,
+            sort: false,
+        },
+        completions: [cat, rat, bat]
+    }
+}
+def my-command [animal: string@animals] { print $animal }
+```
+
+Now, if you try to complete `A`, you get the following completions:
+
+```nu
+>| my-command A
+cat                 rat                 bat
+```
+
+Because we made matching case-insensitive, Nushell will find the substring "a" in all of the completion suggestions. Additionally, because we set `sort: false`, the completions will be left in their original order. This is useful if your completions are already sorted in a particular order unrelated to their text (e.g. by date).
 
 ## Modules and Custom Completions
 
@@ -125,15 +160,20 @@ export extern "git push" [
 
 Custom completions will serve the same role in this example as in the previous examples. The examples above call into two different custom completions, based on the position the user is currently in.
 
-## Custom Descriptions
+## Custom Descriptions and Styles
 
-As an alternative to returning a list of strings, a completion function can also return a list of records with a `value` and `description` field.
+As an alternative to returning a list of strings, a completion function can also return a list of records with a `value` field as well as optional `description` and `style` fields. The style can be one of the following:
+
+- A string with the foreground color, either a hex code or a color name such as `yellow`. For a list of valid color names, see `ansi --list`.
+- A record with the fields `fg` (foreground color), `bg` (background color), and `attr` (attributes such as underline and bold). This record is in the same format that `ansi --escape` accepts. See the [`ansi`](/commands/docs/ansi) command reference for a list of possible values for the `attr` field.
+- The same record, but converted to a JSON string.
 
 ```nu
 def my_commits [] {
     [
-        { value: "5c2464", description: "Add .gitignore" },
-        { value: "f3a377", description: "Initial commit" }
+        { value: "5c2464", description: "Add .gitignore", style: red },
+        # "attr: ub" => underlined and bolded
+        { value: "f3a377", description: "Initial commit", style: { fg: green, bg: "#66078c", attr: ub } }
     ]
 }
 ```
@@ -149,10 +189,10 @@ def my-command [commit: string@my_commits] {
 
 ... be aware that, even though the completion menu will show you something like
 
-```nu
->_ my-command <TAB>
-5c2464  Add .gitignore
-f3a377  Initial commit
+```ansi
+>_ [36mmy-command[0m <TAB>
+[1;31m5c2464[0m  [33mAdd .gitignore[0m
+[1;4;48;2;102;7;140;32mf3a377  [0m[33mInitial commit[0m
 ```
 
 ... only the value (i.e., "5c2464" or "f3a377") will be used in the command arguments!
@@ -174,9 +214,7 @@ $env.config.completions.external = {
 
 You can configure the closure to run an external completer, such as [carapace](https://github.com/rsteube/carapace-bin).
 
-When the closure returns unparsable json (e.g., an empty string) it defaults to file completion.
-
-An external completer is a function that takes the current command as a string list, and outputs a list of records with `value` and `description` keys, like custom completion functions.
+An external completer is a function that takes the current command as a string list, and outputs a list of records with `value` and `description` keys, like custom completion functions. When the closure returns `null`, it defaults to file completion.
 
 ::: tip Note
 This closure will accept the current command as a list. For example, typing `my-command --arg1 <tab>` will receive `[my-command --arg1 " "]`.
@@ -190,4 +228,4 @@ let carapace_completer = {|spans|
 }
 ```
 
-[More examples of custom completers can be found in the cookbook](../cookbook/external_completers.md).
+[More examples of external completers can be found in the cookbook](../cookbook/external_completers.md).

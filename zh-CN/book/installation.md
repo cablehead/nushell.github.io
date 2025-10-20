@@ -6,6 +6,8 @@ Nushell 的主要二进制文件被命名为 `nu`（或 Windows 下的 `nu.exe`�
 
 @[code](@snippets/installation/run_nu.sh)
 
+[[toc]]
+
 ## 预编译二进制包
 
 Nu 二进制文件在 [GitHub 的 Release 页](https://github.com/nushell/nushell/releases) 发布，适用于 Linux、macOS 和 Windows。只需下载并解压二进制文件，然后将其复制到你的系统 `PATH` 上的某个位置即可。
@@ -18,15 +20,75 @@ Nu 可以通过几个软件包管理器获得：
 
 对于 macOS 和 Linux，[Homebrew](https://brew.sh/) 是一个流行的选择（`brew install nushell`）。
 
-对于 Windows 用户：
+对于 Windows：
 
-- [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) (`winget install nushell`)
-- [Chocolatey](https://chocolatey.org/) (`choco install nushell`)
+- [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/)
+
+  - 机器范围安装: `winget install nushell --scope machine`
+  - 机器范围升级: `winget update nushell`
+  - 用户范围安装: `winget install nushell` or `winget install nushell --scope user`
+  - 用户范围升级: 由于 [winget-cli 问题 #3011](https://github.com/microsoft/winget-cli/issues/3011)，运行 `winget update nushell` 会意外地将最新版本安装到 `C:\Program Files\nu`。要解决此问题，请再次运行 `winget install nushell` 以在用户范围内安装最新版本。
+
 - [Scoop](https://scoop.sh/) (`scoop install nu`)
+
+对于 Debian 和 Ubuntu：
+
+```sh
+curl -fsSL https://apt.fury.io/nushell/gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/fury-nushell.gpg
+echo "deb https://apt.fury.io/nushell/ /" | sudo tee /etc/apt/sources.list.d/fury.list
+sudo apt update
+sudo apt install nushell
+```
+
+对于 RedHat/Fedora 和 Rocky Linux：
+
+```sh
+echo "[gemfury-nushell]
+name=Gemfury Nushell Repo
+baseurl=https://yum.fury.io/nushell/
+enabled=1
+gpgcheck=0
+gpgkey=https://yum.fury.io/nushell/gpg.key" | sudo tee /etc/yum.repos.d/fury-nushell.repo
+sudo dnf install -y nushell
+```
+
+对于 Alpine Linux：
+
+```sh
+echo "https://alpine.fury.io/nushell/" | tee -a /etc/apk/repositories
+apk update
+apk add --allow-untrusted nushell
+```
 
 跨平台安装：
 
 - [npm](https://www.npmjs.com/) (`npm install -g nushell` 请注意，以这种方式安装，nu 插件是不包含在内的)
+
+## Docker 容器镜像
+
+Docker 镜像可从 GitHub 容器注册表获得。最新版本的镜像会定期为 Alpine 和 Debian 构建。
+你可以使用以下命令以交互模式运行镜像：
+
+```nu
+docker run -it --rm ghcr.io/nushell/nushell:<version>-<distro>
+```
+
+其中 `<version>` 是你想要运行的 Nushell 版本，`<distro>` 是 `alpine` 或最新的受支持的 Debian 版本，例如 `bookworm`。
+
+要运行特定命令，请使用：
+
+```nu
+docker run --rm ghcr.io/nushell/nushell:latest-alpine -c "ls /usr/bin | where size > 10KiB"
+```
+
+要使用 Bash 从当前目录运行脚本，请使用：
+
+```nu
+docker run --rm \
+    -v $(pwd):/work \
+    ghcr.io/nushell/nushell:latest-alpine \
+    "/work/script.nu"
+```
 
 ## 从源码构建
 
@@ -58,13 +120,9 @@ Nu 目前需要 **最新（1.66.1 或更高）的稳定** 版本的 Rust。最�
 
 #### Debian/Ubuntu
 
-你将需要安装 "pkg-config" 和 "libssl-dev" 包：
+你将需要安装 "pkg-config"、"build-essential" 和 "libssl-dev" 包：
 
 @[code](@snippets/installation/install_pkg_config_libssl_dev.sh)
-
-对于希望使用 "rawkey" 或 "clipboard" 可选功能的 Linux 用户，需要安装 "libx11-dev" 和 "libxcb-composite0-dev" 软件包。
-
-@[code](@snippets/installation/use_rawkey_and_clipboard.sh)
 
 #### 基于 RHEL 的发行版
 
@@ -74,17 +132,31 @@ Nu 目前需要 **最新（1.66.1 或更高）的稳定** 版本的 Rust。最�
 
 #### macOS
 
+##### Homebrew
+
 使用 [Homebrew](https://brew.sh/)，你需要通过如下方式安装 "openssl" 和 "cmake" ：
 
 @[code](@snippets/installation/macos_deps.sh)
 
-### 使用 [crates.io](https://crates.io) 进行构建
+##### Nix
+
+如果在 macOS 上使用 [Nix](https://nixos.org/download/#nix-install-macos) 进行包管理，则需要 `openssl`、`cmake`、`pkg-config` 和 `curl` 包。这些可以通过以下方式安装：
+
+- 全局安装，使用 `nix-env --install`（以及其他方式）。
+- 本地安装，在你的 `home.nix` 配置中使用 [Home Manager](https://github.com/nix-community/home-manager)。
+- 临时安装，使用 `nix-shell`（以及其他方式）。
+
+### 使用 [crates.io](https://crates.io) 和 Cargo 构建
 
 Nu 发行版会作为源码发布到流行的 Rust 包仓库 [crates.io](https://crates.io/)。这使得使用 `cargo` 构建并安装最新的 Nu 版本变得很容易：
 
-@[code](@snippets/installation/cargo_install_nu.sh)
+```nu
+cargo install nu --locked
+```
 
-如此即可！`cargo` 工具将完成下载 Nu 及其源码依赖，构建并将其安装到 cargo bin 路径中，以便我们能够运行它。
+`cargo` 工具将完成下载 Nu 及其源码依赖，构建并将其安装到 cargo bin 路径中。
+
+请注意，使用 `cargo` 时，必须单独安装默认插件。有关说明，请参阅本书的[插件安装](./plugins.html#core-plugins)部分。
 
 ### 从 GitHub 仓库构建
 
@@ -101,27 +173,3 @@ Nu 发行版会作为源码发布到流行的 Rust 包仓库 [crates.io](https:/
 @[code](@snippets/installation/build_nu_from_source_release.sh)
 
 熟悉 Rust 的人可能会问，如果 `run` 默认会构建，为什么我们还要做 `build` 和 `run` 这两个步骤？这是为了解决 Cargo 中新的 `default-run` 选项的缺陷，并确保所有插件都被构建，尽管这在将来可能不再需要。
-
-## 设置登录 Shell（\*nix）
-
-:::danger
-Nu 仍在开发中，对于日常使用可能并不稳定！
-:::
-
-要设置登录 Shell，你可以使用 [`chsh`](https://linux.die.net/man/1/chsh) 命令。一些 Linux 发行版有一个位于 `/etc/shells` 的有效 Shell 列表，在 Nu 被列入白名单之前不允许改变 Shell。如果你没有更新 `shells` 文件，你可能会看到类似于下面的错误：
-
-@[code](@snippets/installation/chsh_invalid_shell_error.sh)
-
-你可以通过在 `shells` 文件中添加你的 Nu 二进制文件来把 Nu 添加到允许的 Shells 列表中。添加的路径可以用 `which nu` 命令找到，通常是 `$HOME/.cargo/bin/nu`。
-
-## 设置默认的 Shell（Windows 终端）
-
-如果你使用的是 [Windows Terminal](https://github.com/microsoft/terminal)，你可以通过添加如下内容到你的终端设置 `"profiles"`（JSON 文件）中来设置 `nu` 作为你的默认 Shell：
-
-@[code](@snippets/installation/windows_terminal_default_shell.sh)
-
-最后需要做的是将 `"defaultProfile"` 改为：
-
-@[code](@snippets/installation/windows_change_default_profile.sh)
-
-之后，`nu` 应该会在 **Windows Terminal** 启动时被加载。

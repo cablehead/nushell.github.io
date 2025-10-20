@@ -1,3 +1,9 @@
+---
+next:
+  text: Default Shell
+  link: /book/default_shell.md
+---
+
 # Installing Nu
 
 There are lots of ways to get Nu up and running. You can download pre-built binaries from our [release page](https://github.com/nushell/nushell/releases), [use your favourite package manager](https://repology.org/project/nushell/versions), or build from source.
@@ -22,9 +28,43 @@ For macOS and Linux, [Homebrew](https://brew.sh/) is a popular choice (`brew ins
 
 For Windows:
 
-- [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) (`winget install nushell`)
-- [Chocolatey](https://chocolatey.org/) (`choco install nushell`)
+- [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/)
+
+  - Machine scope installation: `winget install nushell --scope machine`
+  - Machine scope upgrade: `winget update nushell`
+  - User scope installation: `winget install nushell` or `winget install nushell --scope user`
+  - User scope upgrade: Due to [winget-cli issue #3011](https://github.com/microsoft/winget-cli/issues/3011), running `winget update nushell` will unexpectedly install the latest version to `C:\Program Files\nu`. To work around this, run `winget install nushell` again to install the latest version in the user scope.
+
 - [Scoop](https://scoop.sh/) (`scoop install nu`)
+
+For Debian & Ubuntu:
+
+```sh
+curl -fsSL https://apt.fury.io/nushell/gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/fury-nushell.gpg
+echo "deb https://apt.fury.io/nushell/ /" | sudo tee /etc/apt/sources.list.d/fury.list
+sudo apt update
+sudo apt install nushell
+```
+
+For RedHat/Fedora & Rocky Linux:
+
+```sh
+echo "[gemfury-nushell]
+name=Gemfury Nushell Repo
+baseurl=https://yum.fury.io/nushell/
+enabled=1
+gpgcheck=0
+gpgkey=https://yum.fury.io/nushell/gpg.key" | sudo tee /etc/yum.repos.d/fury-nushell.repo
+sudo dnf install -y nushell
+```
+
+For Alpine Linux:
+
+```sh
+echo "https://alpine.fury.io/nushell/" | tee -a /etc/apk/repositories
+apk update
+apk add --allow-untrusted nushell
+```
 
 Cross Platform installation:
 
@@ -98,16 +138,26 @@ You will need to install "libxcb", "openssl-devel" and "libX11-devel":
 
 #### macOS
 
+##### Homebrew
+
 Using [Homebrew](https://brew.sh/), you will need to install "openssl" and "cmake" using:
 
 @[code](@snippets/installation/macos_deps.sh)
+
+##### Nix
+
+If using [Nix](https://nixos.org/download/#nix-install-macos) for package management on macOS, the `openssl`, `cmake`, `pkg-config`, and `curl` packages are required. These can be installed:
+
+- Globally, using `nix-env --install` (and others).
+- Locally, using [Home Manager](https://github.com/nix-community/home-manager) in your `home.nix` config.
+- Temporarily, using `nix-shell` (and others).
 
 ### Build from [crates.io](https://crates.io) using Cargo
 
 Nushell releases are published as source to the popular Rust package registry [crates.io](https://crates.io/). This makes it easy to build and install the latest Nu release with `cargo`:
 
 ```nu
-cargo install nu
+cargo install nu --locked
 ```
 
 The `cargo` tool will do the work of downloading Nu and its source dependencies, building it, and installing it into the cargo bin path.

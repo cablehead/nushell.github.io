@@ -11,41 +11,56 @@ There are other ways to view these values and variables, however setting up your
 
 ### Configure your path and other environment variables
 
-In order to configure your path in nushell you'll need to modify your `PATH` environment variable in your `config.nu` file. Open your `config.nu` file and put an entry in it like `$env.PATH = "path1;path2;path3"` ensuring that you use the proper path separation character, which is different by platform.
+In your `env.nu`, you can set up your environment.
 
-Alternately, if you want to append a folder to your `PATH` environment variable you can do that too using the `append` or `prepend` command like this:
+To configure environment variables, you use the `$env` variable:
 
 ```nu
-$env.PATH = ($env.PATH | split row (char esep) | append "some/other/path")
+$env.TITLE = 'Nu Test'
+$env.VALUE = 123
 ```
 
-For more detailed instructions, see the documentation about [environment variables](/book/environment.html#setting-environment-variables) and [PATH configuration](/book/configuration.html#path-configuration).
+To add paths to the `PATH` environment variable, you can append them:
+
+```nu
+$env.PATH ++= ['~/.local/bin']
+```
+
+Because you can append a list of paths, you can append multiple at once. You can also use subcommands to construct the paths in line.
+
+```nu
+$env.PATH ++= [ '~/.local/bin', ($env.CARGO_HOME | path join "bin") ]
+```
+
+Because PATH order makes a difference, you may want to _prepend_ your paths instead, so that they take precedence over other executables with the same name:
+
+```
+use std/util "path add"
+path add '~/.local/bin'
+```
+
+For more information, see the documentation about [environment variables](/book/environment.html#setting-environment-variables) and [PATH configuration](/book/configuration.html#path-configuration).
 
 ### How to list your environment variables
 
 ```nu
 $env
-```
-
-Output
-
-```
-─────────────────────────────────┬────────────────────────────────────────────
- ALLUSERSPROFILE                 │ C:\ProgramData
- CARGO_PKG_AUTHORS               │ The Nu Project Contributors
- CARGO_PKG_DESCRIPTION           │ A new type of shell
- CARGO_PKG_HOMEPAGE              │ https://www.nushell.sh
- CARGO_PKG_LICENSE               │ MIT
- CARGO_PKG_LICENSE_FILE          │
- CARGO_PKG_NAME                  │ nu
- CARGO_PKG_REPOSITORY            │ https://github.com/nushell/nushell
- CARGO_PKG_VERSION               │ 0.59.0
- CARGO_PKG_VERSION_MAJOR         │ 0
+# => ─────────────────────────────────┬────────────────────────────────────────────
+# =>  ALLUSERSPROFILE                 │ C:\ProgramData
+# =>  CARGO_PKG_AUTHORS               │ The Nu Project Contributors
+# =>  CARGO_PKG_DESCRIPTION           │ A new type of shell
+# =>  CARGO_PKG_HOMEPAGE              │ https://www.nushell.sh
+# =>  CARGO_PKG_LICENSE               │ MIT
+# =>  CARGO_PKG_LICENSE_FILE          │
+# =>  CARGO_PKG_NAME                  │ nu
+# =>  CARGO_PKG_REPOSITORY            │ https://github.com/nushell/nushell
+# =>  CARGO_PKG_VERSION               │ 0.59.0
+# =>  CARGO_PKG_VERSION_MAJOR         │ 0
 ```
 
 Let's practise that and set `$EDITOR` in our `env.nu` file using `vim` (or an editor of your choice)
 
-```
+```nu
 vim $nu.env-path
 ```
 
@@ -53,8 +68,8 @@ Note: if you've never used `vim` before and you want to leave typing `:q!` will 
 
 Go to the end of the file and add
 
-```
-$env.EDITOR = vim
+```nu
+$env.EDITOR = 'vim'
 ```
 
 or `emacs`, `vscode` or whatever editor you like. Don't forget that the program needs to be accessible on the `PATH`
@@ -69,6 +84,7 @@ You should now be able to run `config nu` or `config env` and edit those files e
 ```nu
 $env.APPDATA
 ```
+
 ---
 
 ### Use hooks to export state via environment variables
@@ -80,17 +96,17 @@ To be most compatible, the `starship` binary will run every prompt render and
 is absolute stateless.
 Nushell, however, is very stateful in a single instance.
 
-[Hooks](https://www.nushell.sh/book/hooks.html#hooks) allow registration of
+[Hooks](../book/hooks.md) allow registration of
 custom callback functions.
 In this case, the `pre_prompt` hook is very useful.
 With it, we can export state information as an environment variable, for
-example, what [overlays](https://www.nushell.sh/book/overlays.html) are
+example, what [overlays](../book/overlays.md) are
 currently activated.
 
 ```nu
 # set NU_OVERLAYS with overlay list, useful for starship prompt
 $env.config.hooks.pre_prompt = ($env.config.hooks.pre_prompt | append {||
-  let overlays = overlay list | range 1..
+  let overlays = overlay list | slice 1..
   if not ($overlays | is-empty) {
     $env.NU_OVERLAYS = $overlays | str join ", "
   } else {

@@ -4,12 +4,12 @@ Nu proporciona una serie de comandos que puedes utilitar en diferentes sistemas 
 
 Comando de Nu:
 
-```
-> ls
+```nu
+ls
 ```
 
 Escapa al comando local:
 
-```
-> ^ls
+```nu
+^ls
 ```

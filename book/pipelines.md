@@ -19,8 +19,8 @@ The last command, `save Cargo_new.toml`, is an output (sometimes called a "sink"
 The `$in` variable will collect the pipeline into a value for you, allowing you to access the whole stream as a parameter:
 
 ```nu
-> [1 2 3] | $in.1 * $in.2
-6
+[1 2 3] | $in.1 * $in.2
+# => 6
 ```
 
 ## Multi-line pipelines
@@ -40,7 +40,7 @@ let year = (
 Take this example:
 
 ```nu
-> line1; line2 | line3
+line1; line2 | line3
 ```
 
 Here, semicolons are used in conjunction with pipelines. When a semicolon is used, no output data is produced to be piped. As such, the `$in` variable will not work when used immediately after the semicolon.
@@ -64,13 +64,13 @@ Compare the following two command-lines that create a directory with tomorrow's 
 
 Using subexpressions:
 
-```nushell
+```nu
 mkdir $'((date now) + 1day | format date '%F') Report'
 ```
 
 or using pipelines:
 
-```nushell
+```nu
 date now                    # 1: today
 | $in + 1day                # 2: tomorrow
 | format date '%F'          # 3: Format as YYYY-MM-DD
@@ -95,7 +95,7 @@ Let's examine the contents of `$in` on each line of the above example:
 
 Certain [filter commands](/commands/categories/filters.html) may modify the pipeline input to their closure in order to provide more convenient access to the expected context. For example:
 
-```nushell
+```nu
 1..10 | each {$in * 2}
 ```
 
@@ -103,13 +103,13 @@ Rather than referring to the entire range of 10 digits, the `each` filter modifi
 
 In most filters, the pipeline input and its resulting `$in` will be the same as the closure parameter. For the `each` filter, the following example is equivalent to the one above:
 
-```nushell
+```nu
 1..10 | each {|value| $value * 2}
 ```
 
 However, some filters will assign an even more convenient value to their closures' input. The `update` filter is one example. The pipeline input to the `update` command's closure (as well as `$in`) refers to the _column_ being updated, while the closure parameter refers to the entire record. As a result, the following two examples are also equivalent:
 
-```nushell
+```nu
 ls | update name {|file| $file.name | str upcase}
 ls | update name {str upcase}
 ```
@@ -130,111 +130,109 @@ See: [Custom Commands -> Pipeline Input](custom_commands.html#pipeline-input)
   def echo_me [] {
     print $in
   }
-
-  > true | echo_me
-  true
+  true | echo_me
+  # => true
   ```
 
-  - **_Rule 1.5:_** This is true throughout the current scope. Even on subsequent lines in a closure or block, `$in` is the same value when used in the first position of _any pipeline_ inside that scope.
+- **_Rule 1.5:_** This is true throughout the current scope. Even on subsequent lines in a closure or block, `$in` is the same value when used in the first position of _any pipeline_ inside that scope.
 
-    Example:
+  Example:
 
-    ```nu
-    [ a b c ] | each {
-        print $in
-        print $in
-        $in
-    }
-    ```
+  ```nu
+  [ a b c ] | each {
+    print $in
+    print $in
+    $in
+  }
+  ```
 
-    All three of the `$in` values are the same on each iteration, so this outputs:
+  All three of the `$in` values are the same on each iteration, so this outputs:
 
-    ```nu
-    a
-    a
-    b
-    b
-    c
-    c
-    ╭───┬───╮
-    │ 0 │ a │
-    │ 1 │ b │
-    │ 2 │ c │
-    ╰───┴───╯
-    ```
+  ```nu
+  a
+  a
+  b
+  b
+  c
+  c
+  ╭───┬───╮
+  │ 0 │ a │
+  │ 1 │ b │
+  │ 2 │ c │
+  ╰───┴───╯
+  ```
 
-* **_Rule 2:_** When used anywhere else in a pipeline (other than the first position), `$in` refers to the previous expression's result:
+- **_Rule 2:_** When used anywhere else in a pipeline (other than the first position), `$in` refers to the previous expression's result:
 
   Example:
 
   ```nushell
-  > 4               # Pipeline input
-    | $in * $in     # $in is 4 in this expression
-    | $in / 2       # $in is now 16 in this expression
-    | $in           # $in is now 8
+  4               # Pipeline input
+  | $in * $in     # $in is 4 in this expression
+  | $in / 2       # $in is now 16 in this expression
+  | $in           # $in is now 8
+  # =>   8
+  ```
 
+- **_Rule 2.5:_** Inside a closure or block, Rule 2 usage occurs inside a new scope (a sub-expression) where that "new" `$in` value is valid. This means that Rule 1 and Rule 2 usage can coexist in the same closure or block.
+
+  Example:
+
+  ```nushell
+  4 | do {
+    print $in            # closure-scope $in is 4
+
+    let p = (            # explicit sub-expression, but one will be created regardless
+      $in * $in          # initial-pipeline position $in is still 4 here
+      | $in / 2          # $in is now 16
+    )                    # $p is the result, 8 - Sub-expression scope ends
+
+    print $in            # At the closure-scope, the "original" $in is still 4
+    print $p
+  }
+  ```
+
+  So the output from the 3 `print` statements is:
+
+  ```nu
+  4
+  4
   8
   ```
 
-  - **_Rule 2.5:_** Inside a closure or block, Rule 2 usage occurs inside a new scope (a sub-expression) where that "new" `$in` value is valid. This means that Rule 1 and Rule 2 usage can coexist in the same closure or block.
-
-    Example:
-
-    ```nushell
-    4 | do {
-      print $in            # closure-scope $in is 4
-
-      let p = (            # explicit sub-expression, but one will be created regardless
-        $in * $in          # initial-pipeline position $in is still 4 here
-        | $in / 2          # $in is now 16
-      )                    # $p is the result, 8 - Sub-expression scope ends
-
-      print $in            # At the closure-scope, the "original" $in is still 4
-      print $p
-    }
-    ```
-
-    So the output from the 3 `print` statements is:
-
-    ```nu
-    4
-    4
-    8
-    ```
-
-    Again, this would hold true even if the command above used the more compact, implicit sub-expression form:
-
-    Example:
-
-    ```nushell
-    4 | do {
-      print $in                       # closure-scope $in is 4
-      let p = $in * $in | $in / 2     # Implicit let sub-expression
-      print $in                       # At the closure-scope, $in is still 4
-      print $p
-    }
-
-    4
-    4
-    8
-    ```
-
-* **_Rule 3:_** When used with no input, `$in` is null.
+  Again, this would hold true even if the command above used the more compact, implicit sub-expression form:
 
   Example:
 
   ```nushell
-  > # Input
-  > 1 | do { $in | describe }
-  int
-  > "Hello, Nushell" | do { $in | describe }
-  string
-  > {||} | do { $in | describe }
-  closure
+  4 | do {
+    print $in                       # closure-scope $in is 4
+    let p = $in * $in | $in / 2     # Implicit let sub-expression
+    print $in                       # At the closure-scope, $in is still 4
+    print $p
+  }
 
-  > # No input
-  > do { $in | describe }
-  nothing
+  4
+  4
+  8
+  ```
+
+- **_Rule 3:_** When used with no input, `$in` is null.
+
+  Example:
+
+  ```nushell
+  # Input
+  1 | do { $in | describe }
+  # =>   int
+  "Hello, Nushell" | do { $in | describe }
+  # =>   string
+  {||} | do { $in | describe }
+  # =>   closure
+
+  # No input
+  do { $in | describe }
+  # =>   nothing
   ```
 
 * **_Rule 4:_** In a multi-statement line separated by semicolons, `$in` cannot be used to capture the results of the previous _statement_.
@@ -242,15 +240,15 @@ See: [Custom Commands -> Pipeline Input](custom_commands.html#pipeline-input)
   This is the same as having no-input:
 
   ```nushell
-  > ls / | get name; $in | describe
-  nothing
+  ls / | get name; $in | describe
+  # => nothing
   ```
 
   Instead, simply continue the pipeline:
 
   ```nushell
-  > ls / | get name | $in | describe
-  list<string>
+  ls / | get name | $in | describe
+  # => list<string>
   ```
 
 ### Best practice for `$in` in Multiline Code
@@ -259,7 +257,7 @@ While `$in` can be reused as demonstrated above, assigning its value to another 
 
 Example:
 
-```nushell
+```nu
 def "date info" [] {
   let day = $in
   print ($day | format date '%v')
@@ -267,10 +265,10 @@ def "date info" [] {
   print $'... was day ($day | format date '%j') of the year'
 }
 
-> '2000-01-01' | date info
- 1-Jan-2000
-... was a Saturday
-... was day 001 of the year
+'2000-01-01' | date info
+# =>  1-Jan-2000
+# => ... was a Saturday
+# => ... was day 001 of the year
 ```
 
 ### Collectability of `$in`
@@ -295,92 +293,155 @@ Data coming from an external command into Nu will come in as bytes that Nushell 
 
 Nu works with data piped between two external commands in the same way as other shells, like Bash would. The `stdout` of external_command_1 is connected to the `stdin` of external_command_2. This lets data flow naturally between the two commands.
 
-### Notes on Errors when Piping Commands
+### Command Input and Output Types
 
-Sometimes, it might be unclear as to why you cannot pipe to a command.
+The Basics section above describes how commands can be combined in pipelines as input, filters, or output.
+How you can use commands depends on what they offer in terms of input/output handling.
 
-For example, PowerShell users may be used to piping the output of any internal PowerShell command directly to another, e.g.:
+You can check what a command supports with [`help <command name>`](/commands/docs/help.md), which shows the relevant *Input/output types*.
 
-`echo 1 | sleep`
-
-(Where for PowerShell, `echo` is an alias to `Write-Output` and `sleep` is to `Start-Sleep`.)
-
-However, it might be surprising that for some commands, the same in Nushell errors:
+For example, through `help first` we can see that the [`first` command](/commands/docs/first.md) supports multiple input and output types:
 
 ```nu
-> echo 1sec | sleep
-Error: nu::parser::missing_positional
+help first
+# => […]
+# => Input/output types:
+# =>   ╭───┬───────────┬────────╮
+# =>   │ # │   input   │ output │
+# =>   ├───┼───────────┼────────┤
+# =>   │ 0 │ list<any> │ any    │
+# =>   │ 1 │ binary    │ binary │
+# =>   │ 2 │ range     │ any    │
+# =>   ╰───┴───────────┴────────╯
 
-  × Missing required positional argument.
-   ╭─[entry #53:1:1]
- 1 │ echo 1sec | sleep
-   ╰────
-  help: Usage: sleep <duration> ...(rest) . Use `--help` for more information.
+[a b c] | first                                                                                                                                   took 1ms
+# => a
+
+1..4 | first                                                                                                                                     took 21ms
+# => 1
 ```
 
-While there is no steadfast rule, Nu generally tries to copy established conventions,
-or do what 'feels right'. And with `sleep`, this is actually the same behaviour as Bash.
-
-Many commands do have piped input/output however, and if it's ever unclear,
-you can see what you can give to a command by invoking `help <command name>`:
+As another example, the [`ls` command](/commands/docs/ls.md) supports output but not input:
 
 ```nu
-> help sleep
-Delay for a specified amount of time.
-
-Search terms: delay, wait, timer
-
-Usage:
-  > sleep <duration> ...(rest)
-
-Flags:
-  -h, --help - Display the help message for this command
-
-Parameters:
-  duration <duration>: Time to sleep.
-  ...rest <duration>: Additional time.
-
-Input/output types:
-  ╭───┬─────────┬─────────╮
-  │ # │  input  │ output  │
-  ├───┼─────────┼─────────┤
-  │ 0 │ nothing │ nothing │
-  ╰───┴─────────┴─────────╯
+help ls
+# => […]
+# => Input/output types:
+# =>   ╭───┬─────────┬────────╮
+# =>   │ # │  input  │ output │
+# =>   ├───┼─────────┼────────┤
+# =>   │ 0 │ nothing │ table  │
+# =>   ╰───┴─────────┴────────╯
 ```
 
-In this case, sleep takes `nothing` and instead expects an argument.
+This means, for example, that attempting to pipe into `ls` (`echo .. | ls`) leads to unintended results.
+The input stream is ignored, and `ls` defaults to listing the current directory.
 
-So, we can supply the output of the `echo` command as an argument to it:
-`echo 1sec | sleep $in` or `sleep (echo 1sec)`
-
-## Behind the Scenes
-
-You may have wondered how we see a table if [`ls`](/commands/docs/ls.md) is an input and not an output. Nu adds this output for us automatically using another command called [`table`](/commands/docs/table.md). The [`table`](/commands/docs/table.md) command is appended to any pipeline that doesn't have an output. This allows us to see the result.
-
-In effect, the command:
+To integrate a command like `ls` into a pipeline, you have to explicitly reference the input and pass it as a parameter:
 
 ```nu
-> ls
+echo .. | ls $in
 ```
 
-And the pipeline:
+Note that this only works if `$in` matches the argument type. For example, `[dir1 dir2] | ls $in` will fail with the error `can't convert list<string> to string`.
+
+Other commands without default behavior may fail in different ways, and with explicit errors.
+
+For example, `help sleep` tells us that [`sleep`](/commands/docs/sleep.md) supports no input and no output types:
 
 ```nu
-> ls | table
+help sleep
+# => […]
+# => Input/output types:
+# =>   ╭───┬─────────┬─────────╮
+# =>   │ # │  input  │ output  │
+# =>   ├───┼─────────┼─────────┤
+# =>   │ 0 │ nothing │ nothing │
+# =>   ╰───┴─────────┴─────────╯
 ```
 
-Are one and the same.
+When we erroneously pipe into it, instead of unintended behavior like in the `ls` example above, we receive an error:
 
-::: tip Note
-The phrase _"are one and the same"_ above only applies to the graphical output in the shell, it does not mean the two data structures are the same:
-
-```nushell
-(ls) == (ls | table)
-# => false
+```nu
+echo 1sec | sleep
+# => Error: nu::parser::missing_positional
+# => 
+# =>   × Missing required positional argument.
+# =>    ╭─[entry #53:1:18]
+# =>  1 │ echo 1sec | sleep
+# =>    ╰────
+# =>   help: Usage: sleep <duration> ...(rest) . Use `--help` for more information.
 ```
 
-`ls | table` is not even structured data!
-:::
+While there is no steadfast rule, Nu generally tries to copy established conventions in command behavior,
+or do what 'feels right'.
+The `sleep` behavior of not supporting an input stream matches Bash `sleep` behavior for example.
+
+Many commands do have piped input/output however, and if it's ever unclear, check their `help` documentation as described above.
+
+## Rendering Display Results
+
+In interactive mode, when a pipeline ends, the [`display_output` hook configuration](https://www.nushell.sh/book/hooks.html#changing-how-output-is-displayed) defines how the result will be displayed.
+The default configuration uses the [`table` command](/commands/docs/table.md) to render structured data as a visual table.
+
+The following example shows how the `display_output` hook can render
+
+- an expanded table with `table -e`
+- an unexpanded table with `table`
+- an empty closure `{||}` and empty string `''` lead to simple output
+- `null` can be assigned to clear any customization, reverting back to default behavior
+
+```nu
+$env.config.hooks.display_output = { table -e }
+[1,2,3,[4,5,6]]
+# => ╭───┬───────────╮
+# => │ 0 │         1 │
+# => │ 1 │         2 │
+# => │ 2 │         3 │
+# => │ 3 │ ╭───┬───╮ │
+# => │   │ │ 0 │ 4 │ │
+# => │   │ │ 1 │ 5 │ │
+# => │   │ │ 2 │ 6 │ │
+# => │   │ ╰───┴───╯ │
+# => ╰───┴───────────╯
+
+$env.config.hooks.display_output = { table }
+[1,2,3,[4,5,6]]
+# => ╭───┬────────────────╮
+# => │ 0 │              1 │
+# => │ 1 │              2 │
+# => │ 2 │              3 │
+# => │ 3 │ [list 3 items] │
+# => ╰───┴────────────────╯
+
+$env.config.hooks.display_output = {||}
+[1,2,3,[4,5,6]]
+# => 1
+# => 2
+# => 3
+# => [4
+# => 5
+# => 6]
+
+$env.config.hooks.display_output = ''
+[1,2,3,[4,5,6]]
+# => 1
+# => 2
+# => 3
+# => [4
+# => 5
+# => 6]
+
+# clear to default behavior
+$env.config.hooks.display_output = null
+[1,2,3,[4,5,6]]
+# => ╭───┬────────────────╮
+# => │ 0 │              1 │
+# => │ 1 │              2 │
+# => │ 2 │              3 │
+# => │ 3 │ [list 3 items] │
+# => ╰───┴────────────────╯
+```
 
 ## Output Result to External Commands
 
@@ -388,44 +449,44 @@ Sometimes you want to output Nushell structured data to an external command for 
 For example, you want to find a file named "tutor" under "/usr/share/vim/runtime" and check its ownership
 
 ```nu
-> ls /usr/share/nvim/runtime/
-╭────┬───────────────────────────────────────┬──────┬─────────┬───────────────╮
-│  # │                 name                  │ type │  size   │   modified    │
-├────┼───────────────────────────────────────┼──────┼─────────┼───────────────┤
-│  0 │ /usr/share/nvim/runtime/autoload      │ dir  │  4.1 KB │ 2 days ago    │
-..........
-..........
-..........
-
-│ 31 │ /usr/share/nvim/runtime/tools         │ dir  │  4.1 KB │ 2 days ago    │
-│ 32 │ /usr/share/nvim/runtime/tutor         │ dir  │  4.1 KB │ 2 days ago    │
-├────┼───────────────────────────────────────┼──────┼─────────┼───────────────┤
-│  # │                 name                  │ type │  size   │   modified    │
-╰────┴───────────────────────────────────────┴──────┴─────────┴───────────────╯
+ls /usr/share/nvim/runtime/
+# => ╭────┬───────────────────────────────────────┬──────┬─────────┬───────────────╮
+# => │  # │                 name                  │ type │  size   │   modified    │
+# => ├────┼───────────────────────────────────────┼──────┼─────────┼───────────────┤
+# => │  0 │ /usr/share/nvim/runtime/autoload      │ dir  │  4.1 KB │ 2 days ago    │
+# => ..........
+# => ..........
+# => ..........
+# => 
+# => │ 31 │ /usr/share/nvim/runtime/tools         │ dir  │  4.1 KB │ 2 days ago    │
+# => │ 32 │ /usr/share/nvim/runtime/tutor         │ dir  │  4.1 KB │ 2 days ago    │
+# => ├────┼───────────────────────────────────────┼──────┼─────────┼───────────────┤
+# => │  # │                 name                  │ type │  size   │   modified    │
+# => ╰────┴───────────────────────────────────────┴──────┴─────────┴───────────────╯
 ```
 
 You decided to use `grep` and [pipe](https://www.nushell.sh/book/pipelines.html) the result to external `^ls`
 
 ```nu
-> ls /usr/share/nvim/runtime/ | get name | ^grep tutor | ^ls -la $in
-ls: cannot access ''$'\342\224\202'' 32 '$'\342\224\202'' /usr/share/nvim/runtime/tutor        '$'\342\224\202\n': No such file or directory
+ls /usr/share/nvim/runtime/ | get name | ^grep tutor | ^ls -la $in
+# => ls: cannot access ''$'\342\224\202'' 32 '$'\342\224\202'' /usr/share/nvim/runtime/tutor        '$'\342\224\202\n': No such file or directory
 ```
 
 What's wrong? Nushell renders lists and tables (by adding a border with characters like `╭`,`─`,`┬`,`╮`) before piping them as text to external commands. If that's not the behavior you want, you must explicitly convert the data to a string before piping it to an external. For example, you can do so with [`to text`](/commands/docs/to_text.md):
 
 ```nu
-> ls /usr/share/nvim/runtime/ | get name | to text | ^grep tutor | tr -d '\n' | ^ls -la $in
-total 24
-drwxr-xr-x@  5 pengs  admin   160 14 Nov 13:12 .
-drwxr-xr-x@  4 pengs  admin   128 14 Nov 13:42 en
--rw-r--r--@  1 pengs  admin  5514 14 Nov 13:42 tutor.tutor
--rw-r--r--@  1 pengs  admin  1191 14 Nov 13:42 tutor.tutor.json
+ls /usr/share/nvim/runtime/ | get name | to text | ^grep tutor | tr -d '\n' | ^ls -la $in
+# => total 24
+# => drwxr-xr-x@  5 pengs  admin   160 14 Nov 13:12 .
+# => drwxr-xr-x@  4 pengs  admin   128 14 Nov 13:42 en
+# => -rw-r--r--@  1 pengs  admin  5514 14 Nov 13:42 tutor.tutor
+# => -rw-r--r--@  1 pengs  admin  1191 14 Nov 13:42 tutor.tutor.json
 ```
 
 (Actually, for this simple usage you can just use [`find`](/commands/docs/find.md))
 
 ```nu
-> ls /usr/share/nvim/runtime/ | get name | find tutor | ^ls -al $in
+ls /usr/share/nvim/runtime/ | get name | find tutor | ansi strip | ^ls -al ...$in
 ```
 
 ## Command Output in Nushell
@@ -433,7 +494,7 @@ drwxr-xr-x@  4 pengs  admin   128 14 Nov 13:42 en
 Unlike external commands, Nushell commands are akin to functions. Most Nushell commands do not print anything to `stdout` and instead just return data.
 
 ```nu
-> do { ls; ls; ls; "What?!" }
+do { ls; ls; ls; "What?!" }
 ```
 
 This means that the above code will not display the files under the current directory three times.
@@ -442,13 +503,13 @@ In fact, running this in the shell will only display `"What?!"` because that is 
 Knowing when data is displayed is important when using configuration variables that affect the display output of commands such as `table`.
 
 ```nu
-> do { $env.config.table.mode = none; ls }
+do { $env.config.table.mode = "none"; ls }
 ```
 
 For instance, the above example sets the `$env.config.table.mode` configuration variable to `none`, which causes the `table` command to render data without additional borders. However, as it was shown earlier, the command is effectively equivalent to
 
 ```nu
-> do { $env.config.table.mode = none; ls } | table
+do { $env.config.table.mode = "none"; ls } | table
 ```
 
 Because Nushell `$env` variables are [scoped](https://www.nushell.sh/book/environment.html#scoping), this means that the `table` command in the example is not affected by the
@@ -457,6 +518,6 @@ environment modification inside the `do` block and the data will not be shown wi
 When displaying data early is desired, it is possible to explicitly apply `| table` inside the scope, or use the `print` command.
 
 ```nu
-> do { $env.config.table.mode = none; ls | table }
-> do { $env.config.table.mode = none; print (ls) }
+do { $env.config.table.mode = "none"; ls | table }
+do { $env.config.table.mode = "none"; print (ls) }
 ```

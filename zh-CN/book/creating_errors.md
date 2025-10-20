@@ -16,7 +16,7 @@ let span = (metadata $x).span;
 接下来你可以通过 `error make` 命令来创建一个错误，该命令需要一个可以描述待创建错误的记录作为输入：
 
 ```nu
-error make {msg: "this is fishy", label: {text: "fish right here", start: $span.start, end: $span.end } }
+error make {msg: "this is fishy", label: {text: "fish right here", span: $span } }
 ```
 
 与你的自定义命令放在一起后，它可能看起来像这样：
@@ -28,8 +28,7 @@ def my-command [x] {
         msg: "this is fishy",
         label: {
             text: "fish right here",
-            start: $span.start,
-            end: $span.end
+            span: $span
         }
     }
 }
@@ -38,13 +37,12 @@ def my-command [x] {
 现在当传入一个值调用时，我们会看到一个错误信息返回：
 
 ```nu
-> my-command 100
-
-Error:
-  × this is fishy
-   ╭─[entry #5:1:1]
- 1 │ my-command 100
-   ·            ─┬─
-   ·             ╰── fish right here
-   ╰────
+my-command 100
+# => Error:
+# =>   × this is fishy
+# =>    ╭─[entry #5:1:1]
+# =>  1 │ my-command 100
+# =>    ·            ─┬─
+# =>    ·             ╰── fish right here
+# =>    ╰────
 ```

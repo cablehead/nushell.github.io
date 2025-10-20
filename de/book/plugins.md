@@ -6,12 +6,12 @@ Um ein Plugin hinzuzufügen, muss es erstellt werden und dann der Befehl `plugin
 
 Ein Beispiel:
 
-```
-> plugin add ./my_plugins/nu-plugin-inc -e capnp
+```nu
+plugin add ./my_plugins/nu-plugin-inc -e capnp
 ```
 
 Wenn der Befehl registriert wurde, kann er als Teil der internen Befehle verwendet werden.
 
-```
-> inc --help
+```nu
+inc --help
 ```

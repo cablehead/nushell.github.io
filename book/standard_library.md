@@ -1,3 +1,8 @@
+---
+prev:
+  text: (Not so) Advanced
+  link: /book/advanced.md
+---
 # Standard Library (Preview)
 
 Nushell ships with a standard library of useful commands written in native Nu. By default, the standard library is loaded into memory (but not automatically imported) when Nushell starts.
@@ -93,16 +98,14 @@ use std formats *
 ```
 
 ::: important
-However, similar to `use std *`, this form first loads the _entire_ Standard Library into scope and _then_ imports the submodules. In contrast, the slash-separated versions in #1 and #2 above _only_ import the submodule and will be much faster as a result.
+As mentioned in [Using Modules](./modules/using_modules.md#module-definitions), this form (like `use std *`) first loads the _entire_ Standard Library into scope and _then_ imports the submodules. In contrast, the slash-separated versions in #1 and #2 above _only_ import the submodule and will be much faster as a result.
 :::
 
 ## The Standard Library Candidate Module
 
-(Also known as `std-rfc`)
+`std-rfc`, found in the [nushell Repository](https://github.com/nushell/nushell/tree/main/crates/nu-std/std-rfc), serves as a staging ground for possible Standard Library additions.
 
-`stdlib-candidate`, found in the [nu_scripts Repository](https://github.com/nushell/nu_scripts/tree/main/stdlib-candidate/std-rfc), serves as a staging ground for possible Standard Library additions.
-
-If you are interested in adding to the Standard Library, please submit your code via PR to the Candidate module in that repository. We also encourage you to install this module and provide feedback on upcoming candidate commands.
+If you are interested in adding to the Standard Library, please submit your code via PR to the `std-rfc` module in that repository. We also encourage you to install this module and provide feedback on upcoming candidate commands.
 
 ::: details More details
 
@@ -145,6 +148,13 @@ nu -n -c "$nu.startup-time"
 ```
 
 You will not be able to import the library, any of its submodules, nor use any of its commands, when it is disabled in this way.
+
+## Using `std/log` in Modules
+
+::: warning Important!
+`std/log` exports environment variables. To use the `std/log` module in your own module, please see [this caveat](./modules/creating_modules.md#export-env-runs-only-when-the-use-call-is-evaluated) in the "Creating Modules" Chapter.
+
+:::
 
 ## Optimal Startup
 

@@ -6,8 +6,8 @@ Uno de los diseños centrales de Nu es la tubería (pipeline), una idea de dise�
 
 Una tubería (pipeline) es construída con tres partes: la entrada, el filtro, y la salida.
 
-```
-> open "Cargo.toml" | inc package.version | save "Cargo_new.toml"
+```nu
+open "Cargo.toml" | inc package.version | save "Cargo_new.toml"
 ```
 
 El primer comando, `open "Cargo.toml"`, es una entrada (a veces también llamada "fuente" o "productor"). Esto crea o carga datos y lo canaliza en la tubería. Es de entrada para la tubería tener valores y poder trabajarlas. Comandos como `ls` también son entradas ya que toman datos desde el sistema de archivos y lo canalizan a través de las tuberías para que puedan ser usadas.
@@ -38,14 +38,14 @@ Es posible que te hayas preguntado como miramos una tabla si `ls` es una entrada
 
 En efecto, el comando:
 
-```
-> ls
+```nu
+ls
 ```
 
 y la tubería:
 
-```
-> ls | autoview
+```nu
+ls | autoview
 ```
 
 Son uno y lo mismo.

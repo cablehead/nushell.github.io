@@ -20,6 +20,7 @@ import {
   navbarPtBR,
   navbarRU,
   navbarZhCN,
+  navbarKo,
   sidebarDe,
   sidebarEn,
   sidebarFr,
@@ -28,6 +29,7 @@ import {
   sidebarPtBR,
   sidebarRU,
   sidebarZhCN,
+  sidebarKo,
 } from './configs/index.js';
 
 const compareDate = (dateA, dateB) => {
@@ -88,8 +90,23 @@ export default defineUserConfig({
       title: 'Nushell',
       description: 'Новый тип оболочки.',
     },
+    '/ko/': {
+      lang: 'ko-KR',
+      title: 'Nushell',
+      description: '새로운 유형의 셸',
+    },
   },
   head: [
+    [
+      'link',
+      {
+        rel: 'preload',
+        href: '/fonts/FiraCode-Regular.woff2',
+        as: 'font',
+        type: 'font/woff2',
+        crossorigin: 'anonymous',
+      },
+    ],
     ['meta', { name: 'theme-color', content: '#3eaf7c' }],
     ['meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }],
     [
@@ -103,11 +120,15 @@ export default defineUserConfig({
       handleImportPath: (str) =>
         str.replace(/^@snippets/, path.resolve(__dirname, '../snippets')),
     },
+    highlighter: 'shiki',
   },
   // without this, we attempt to prefetch the whole site 😬
   shouldPrefetch: false,
   colorMode: 'auto',
   theme: defaultTheme({
+    markdown: {
+      highlighter: 'shiki',
+    },
     repo: 'nushell/nushell',
     repoLabel: 'GitHub',
     editLinks: true,
@@ -171,6 +192,16 @@ export default defineUserConfig({
         navbar: navbarZhCN,
         sidebar: sidebarZhCN,
       },
+      '/ko/': {
+        selectText: '언어',
+        selectLanguageName: '한국어',
+        editLinkText: 'GitHub에서 수정하기',
+        navbar: navbarKo,
+        sidebar: sidebarKo,
+      },
+    },
+    themePlugins: {
+      prismjs: false,
     },
   }),
   plugins: [
@@ -185,14 +216,40 @@ export default defineUserConfig({
       },
     }),
     shikiPlugin({
-      theme: 'dark-plus',
-      lineNumbers: true,
+      themes: {
+        light: 'dark-plus',
+        dark: 'dark-plus',
+        onedarkpro: 'one-dark-pro', // pre-load one-dark-pro for ansi code blocks
+      },
+      lineNumbers: 10,
+      collapsedLines: false,
+      transformers: [
+        // use one-dark-pro theme for ansi code blocks
+        {
+          preprocess(code, options) {
+            if (options.lang == 'ansi') {
+              this.options.defaultColor = 'onedarkpro';
+              // this doesn't work at the top-level for some reason
+              this.options.colorReplacements = {
+                // make one-dark-pro background color the same as dark-plus
+                '#282c34': '#1e1e1e',
+                // HACK: change color of comments, since nu-highlight can't highlight them
+                '#abb2bf': '#80858f',
+              };
+            }
+            return code;
+          },
+        },
+      ],
       langs: [
+        'csv',
         'nushell',
         'rust',
         'bash',
         'shell',
         'sh',
+        'csv',
+        'ansi',
         'toml',
         'json',
         'javascript',
@@ -218,14 +275,27 @@ export default defineUserConfig({
         );
       },
       sorter: (a, b) => {
-        return compareDate(
-          a.data.git?.createdTime
-            ? new Date(a.data.git?.createdTime)
-            : a.frontmatter.date,
-          b.data.git?.createdTime
-            ? new Date(b.data.git?.createdTime)
-            : b.frontmatter.date,
+        const pathDateA = new Date(
+          a.path.replace('/blog/', '').substring(0, 10),
         );
+        const pathDateB = new Date(
+          b.path.replace('/blog/', '').substring(0, 10),
+        );
+        const effectiveDateA =
+          pathDateA != 'Invalid Date'
+            ? pathDateA
+            : a.frontmatter.date
+              ? new Date(a.frontmatter.date)
+              : new Date(a.data.git?.createdTime);
+
+        // Determine the effective date for item B
+        const effectiveDateB =
+          pathDateB != 'Invalid Date'
+            ? pathDateB
+            : b.frontmatter.date
+              ? new Date(b.frontmatter.date)
+              : new Date(b.data.git?.createdTime);
+        return compareDate(effectiveDateA, effectiveDateB);
       },
     }),
     sitemapPlugin({

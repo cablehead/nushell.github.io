@@ -7,8 +7,8 @@ Nerd Fonts are not required, but they can improve the prompt presentation throug
 > Nerd Fonts patches developer targeted fonts with a high number of glyphs (icons).
 > Specifically to add a high number of extra glyphs from popular ‘iconic fonts’ such as Font Awesome, Devicons, Octicons, and others.
 
-* [Nerd Fonts website](https://www.nerdfonts.com)
-* [Source Repository](https://github.com/ryanoasis/nerd-fonts)
+- [Nerd Fonts website](https://www.nerdfonts.com)
+- [Source Repository](https://github.com/ryanoasis/nerd-fonts)
 
 ## oh-my-posh
 
@@ -25,15 +25,15 @@ If you like [oh-my-posh](https://ohmyposh.dev/), you can use oh-my-posh with Nus
 
 ```nu
 # Generate the .oh-my-posh.nu file
-> oh-my-posh init nu --config ~/.poshthemes/M365Princess.omp.json
+oh-my-posh init nu --config ~/.poshthemes/M365Princess.omp.json
 
 # Initialize oh-my-posh.nu at shell startup by adding this line in your config.nu file
-> source ~/.oh-my-posh.nu
+source ~/.oh-my-posh.nu
 ```
 
 For MacOS users:
 
-1. You can install oh-my-posh by `brew`, just following the [guide here](https://ohmyposh.dev/docs/installation/macos)
+1. You can install oh-my-posh using `brew`, just following the [guide here](https://ohmyposh.dev/docs/installation/macos)
 2. Download and install a [nerd font](https://github.com/ryanoasis/nerd-fonts).
 3. Set the PROMPT_COMMAND in the file output by `$nu.config-path`, here is a code snippet:
 
@@ -66,7 +66,8 @@ Starship running without doing anything manual:
 
 - Starship will create its own configuration / environment setup script
 - you simply have to create it in `env.nu` and `use` it in `config.nu`
-  :::
+
+:::
 
 Here's an example config section for Starship:
 

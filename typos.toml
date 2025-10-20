@@ -1,15 +1,25 @@
 [files]
-extend-exclude = ["pt-BR", "de", "ja", "es", "blog/202[0-3]*", "commands/", "fr"]
+extend-exclude = ["pt-BR", "de", "ja", "es", "blog/202[0-4]*", "commands/", "fr", "blog/2025-03-1*"]
+
+[default]
+extend-ignore-identifiers-re = [
+    "(?i)foobar", # false positive in book/sorting.md
+]
 
 [default.extend-words]
-ons = "ons" # false positive in commands/docs/str_replace.md
-ful = "ful" # false positive in commands/docs/str_replace.md
-optio = "optio" # false positive in cookbook/http.md
 "ime" = "ime" # false positive in cookbook/polars_v_pandas_v_nushell.md
-ws = "ws" # false positive in book/nushell_map.md
-ratatui = "ratatui"
+ba = "ba"
 doas = "doas"
+ful = "ful" # false positive in commands/docs/str_replace.md
+guid = "guid"
+hel = "hel" # false positive in blog/2025-09-02-nushell_0_107_0.md
 iterm = "iterm"
 nushell = "nushell"
-ba = "ba"
-guid = "guid"
+ons = "ons" # false positive in commands/docs/str_replace.md
+optio = "optio" # false positive in cookbook/http.md
+ratatui = "ratatui"
+ws = "ws" # false positive in book/nushell_map.md
+feeze = "feeze"
+alues = "alues"
+Flippin = "Flippin"
+

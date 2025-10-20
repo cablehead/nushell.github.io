@@ -1,15 +1,15 @@
 # Hooks
 
 Hooks allow you to run a code snippet at some predefined situations.
-They are only available in the interactive mode ([REPL](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)), they do not work if you run a Nushell with a script (`nu script.nu`) or commands (`nu -c "print foo"`) arguments.
+They are only available in the interactive mode ([REPL](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)), they do not work if you run Nushell with a script (`nu script.nu`) or command (`nu -c "print foo"`) argument.
 
 Currently, we support these types of hooks:
 
 - `pre_prompt` : Triggered before the prompt is drawn
 - `pre_execution` : Triggered before the line input starts executing
 - `env_change` : Triggered when an environment variable changes
-- `display_output` : A block that the output is passed to (experimental).
-- `command_not_found` : Triggered when a command is not found.
+- `display_output` : A block that the output is passed to
+- `command_not_found` : Triggered when a command is not found
 
 To make it clearer, we can break down Nushell's execution cycle.
 The steps to evaluate one line in the REPL mode are as follows:
@@ -28,57 +28,43 @@ The steps to evaluate one line in the REPL mode are as follows:
 To enable hooks, define them in your [config](configuration.md):
 
 ```nu
-$env.config = {
-    # ...other config...
-
-    hooks: {
-        pre_prompt: { print "pre prompt hook" }
-        pre_execution: { print "pre exec hook" }
-        env_change: {
-            PWD: {|before, after| print $"changing directory from ($before) to ($after)" }
-        }
+$env.config.hooks = {
+    pre_prompt: [{ print "pre prompt hook" }]
+    pre_execution: [{ print "pre exec hook" }]
+    env_change: {
+        PWD: [{|before, after| print $"changing directory from ($before) to ($after)" }]
     }
 }
 ```
 
-Try putting the above to your config, running Nushell and moving around your filesystem.
+Try putting the above into your config, running Nushell and moving around your filesystem.
 When you change a directory, the `PWD` environment variable changes and the change triggers the hook with the previous and the current values stored in `before` and `after` variables, respectively.
 
 Instead of defining just a single hook per trigger, it is possible to define a **list of hooks** which will run in sequence:
 
 ```nu
-$env.config = {
-    ...other config...
-
-    hooks: {
-        pre_prompt: [
-            { print "pre prompt hook" }
-            { print "pre prompt hook2" }
+$env.config.hooks = {
+    pre_prompt: [
+        { print "pre prompt hook" }
+        { print "pre prompt hook2" }
+    ]
+    pre_execution: [
+        { print "pre exec hook" }
+        { print "pre exec hook2" }
+    ]
+    env_change: {
+        PWD: [
+            {|before, after| print $"changing directory from ($before) to ($after)" }
+            {|before, after| print $"changing directory from ($before) to ($after) 2" }
         ]
-        pre_execution: [
-            { print "pre exec hook" }
-            { print "pre exec hook2" }
-        ]
-        env_change: {
-            PWD: [
-                {|before, after| print $"changing directory from ($before) to ($after)" }
-                {|before, after| print $"changing directory from ($before) to ($after) 2" }
-            ]
-        }
     }
 }
 ```
 
-Also, it might be more practical to update the existing config with new hooks, instead of defining the whole config from scratch:
+Instead of replacing all hooks, you can append a new hook to existing configuration:
 
 ```nu
-$env.config = ($env.config | upsert hooks {
-    pre_prompt: ...
-    pre_execution: ...
-    env_change: {
-        PWD: ...
-    }
-})
+$env.config.hooks.pre_execution = $env.config.hooks.pre_execution | append { print "pre exec hook3" }
 ```
 
 ## Changing Environment
@@ -88,15 +74,35 @@ Environment variables defined inside the hook **block** will be preserved in a s
 You can test it with the following example:
 
 ```nu
-> $env.config = ($env.config | upsert hooks {
+$env.config = ($env.config | upsert hooks {
     pre_prompt: { $env.SPAM = "eggs" }
 })
 
-> $env.SPAM
-eggs
+$env.SPAM
+# => eggs
 ```
 
 The hook blocks otherwise follow the general scoping rules, i.e., commands, aliases, etc. defined within the block will be thrown away once the block ends.
+
+## `pre_execution` Hooks
+
+`pre_execution` hooks can inspect the to-be-executed command through the [`commandline` command](/commands/docs/commandline.md).
+
+For example, to print the command being executed:
+
+```nu
+$env.config = (
+    $env.config
+    | upsert hooks.pre_execution [ {||
+        $env.repl_commandline = (commandline)
+        print $"Command: ($env.repl_commandline)"
+    } ]
+)
+
+print (1 + 3)
+# => Command: print (1 + 3)
+# => 4
+```
 
 ## Conditional Hooks
 
@@ -119,7 +125,7 @@ $env.config = ($env.config | upsert hooks {
 This won't work because the environment will be active only within the [`if`](/commands/docs/if.md) block.
 In this case, you could easily rewrite it as `load-env (if $after == ... { ... } else { {} })` but this pattern is fairly common and later we'll see that not all cases can be rewritten like this.
 
-To deal with the above problem, we introduce another way to define a hook -- **a record**:
+To deal with the above problem, we introduce another way to define a hook - **a record**:
 
 ```nu
 $env.config = ($env.config | upsert hooks {
@@ -150,12 +156,12 @@ You can think of it as if you typed the string into the REPL and hit Enter.
 So, the hook from the previous section can be also written as
 
 ```nu
-> $env.config = ($env.config | upsert hooks {
+$env.config = ($env.config | upsert hooks {
     pre_prompt: '$env.SPAM = "eggs"'
 })
 
-> $env.SPAM
-eggs
+$env.SPAM
+# => eggs
 ```
 
 This feature can be used, for example, to conditionally bring in definitions based on the current directory:
@@ -197,7 +203,7 @@ An example for PWD env change hook:
 
 ```nu
 $env.config = ($env.config | upsert hooks.env_change.PWD {|config|
-    let val = ($config | get -i hooks.env_change.PWD)
+    let val = ($config | get -o hooks.env_change.PWD)
 
     if $val == null {
         $val | append {|before, after| print $"changing directory from ($before) to ($after)" }
@@ -226,7 +232,7 @@ $env.config = ($env.config | upsert hooks.env_change.PWD {
         {
             condition: {|before, after|
                 ('/path/to/target/dir' not-in $after
-                    and '/path/to/target/dir' in $before
+                    and '/path/to/target/dir' in ($before | default "")
                     and 'test-env' in (overlay list))
             }
             code: "overlay hide test-env --keep-env [ PWD ]"
@@ -297,7 +303,16 @@ $env.config = {
 }
 ```
 
+### `command_not_found` Hook in _NixOS_
 
+NixOS comes with the command `command-not-found`. We only need to plug it in the nushell hook:
+
+```nu
+$env.config.hooks.command_not_found = {
+  |command_name|
+  print (command-not-found $command_name | str trim)
+}
+```
 
 ### `command_not_found` Hook in _Windows_
 

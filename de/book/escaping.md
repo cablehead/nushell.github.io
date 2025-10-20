@@ -4,12 +4,12 @@ Nushell stellt einen identischen Satz an Befehlen für verschiedene Systeme zur 
 
 Nushell Befehl:
 
-```
-> ls
+```nu
+ls
 ```
 
 Aufruf des Systembefehls:
 
-```
-> ^ls
+```nu
+^ls
 ```

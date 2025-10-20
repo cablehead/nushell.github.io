@@ -1,3 +1,11 @@
+---
+prev:
+  text: Best Practices
+  link: /book/style_guide.md
+next:
+  text: Configuration
+  link: /book/configuration.md
+---
 # Nu as a Shell
 
 The [Nu Fundamentals](nu_fundamentals.md) and [Programming in Nu](programming_in_nu.md) chapter focused mostly on the language aspects of Nushell.
@@ -12,17 +20,17 @@ A big feature of any shell are [environment variables](environment.md).
 In Nushell, environment variables are scoped and can have any type supported by Nushell.
 This brings in some additional design considerations so please refer to the linked section for more details.
 
-The other sections explain how to work with [stdout, stderr and exit codes](stdout_stderr_exit_codes.md), how to [escape a command call to the external command call](escaping.md), and how to [configure 3rd party prompts](3rdpartyprompts.md) to work with Nushell.
+The other sections explain how to work with [stdout, stderr and exit codes](stdout_stderr_exit_codes.md), how to [run an external command when there is a built-in with the same name](./running_externals.md), and how to [configure 3rd party prompts](3rdpartyprompts.md) to work with Nushell.
 
-An interesting feature of Nushell is [shells](shells_in_shells.md) which let you work in multiple directories simultaneously.
+An interesting feature of Nushell is the [Directory Stack](directory_stack.md) which let you work in multiple directories simultaneously.
 
 Nushell also has its own line editor [Reedline](line_editor.md).
 With Nushell's config, it is possible to configure some of the Reedline's features, such as the prompt, keybindings, history, or menus.
 
-It is also possible to define [custom signatures for external commands](externs.md) which lets you define [custom completions](custom_completions.md) for them (the custom completions work also for Nushell custom commands).
+It is also possible to define [custom signatures for external commands](externs.md) which lets you define [custom completions](custom_completions.md) for them (the custom completions also work for Nushell custom commands).
 
 [Coloring and Theming in Nu](coloring_and_theming.md) goes into more detail about how to configure Nushell's appearance.
 
-If you want to schedule some commands to run in the background, [Background task in Nu](background_task.md) provide a simple guideline for you to follow.
+If you want to schedule some commands to run in the background, [Background jobs](background_jobs.md) provides simple guidelines for you to follow.
 
-And finally, [hooks](hooks.md) allow you to insert fragments of Nushell code to run at certain events.
+Finally, [hooks](hooks.md) allow you to insert fragments of Nushell code to run at certain events.

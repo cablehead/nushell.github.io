@@ -25,16 +25,16 @@ Nu には、見た目や挙動を変更させるための内部的な変数が�
 
 これらの変数のいずれかを設定するには`config set` コマンドを利用します。例えば
 
-```
-> config set edit_mode "vi"
+```nu
+config set edit_mode "vi"
 ```
 
 ### パイプラインからの変数を設定
 
 設定したい値をパイプラインを通じて設定することもできます。このためには`set_into`フラグを利用します。
 
-```
-> echo "bar" | config set_into foo
+```nu
+echo "bar" | config set_into foo
 ```
 
 この方法は、`env`や`path`変数を設定する際に便利です。
@@ -43,14 +43,14 @@ Nu には、見た目や挙動を変更させるための内部的な変数が�
 
 `config`コマンドを引数なしで実行すると現在の設定されている変数を表示します。
 
-```
-> config
-─────────────────┬──────────────────
- completion_mode │ circular
- env             │ [row 51 columns]
- path            │ [table 9 rows]
- startup         │ [table 1 rows]
-─────────────────┴──────────────────
+```nu
+config
+# => ─────────────────┬──────────────────
+# =>  completion_mode │ circular
+# =>  env             │ [row 51 columns]
+# =>  path            │ [table 9 rows]
+# =>  startup         │ [table 1 rows]
+# => ─────────────────┴──────────────────
 ```
 
 注: もしまだ変数を設定していない場合、出力が空の場合があります。
@@ -59,41 +59,41 @@ Nu には、見た目や挙動を変更させるための内部的な変数が�
 
 `get`フラグを利用して特定の変数の値を取得できます。
 
-```
-> config get edit_mode
+```nu
+config get edit_mode
 ```
 
 ### 変数の削除
 
 変数を削除する場合、`remove`フラグを利用します。
 
-```
-> config remove edit_mode
+```nu
+config remove edit_mode
 ```
 
 ### 設定全体のクリア
 
 設定全体をクリアして、最初からやりなおしたい場合は`--clear`フラグを利用できます。このコマンドを実行すると設定ファイルもクリアされるので注意してください。
 
-```
-> config clear
+```nu
+config clear
 ```
 
 ### 設定が保存されている場所をみつける
 
 設定ファイルはデフォルトの場所から読み込まれます。この場所をみつけるには`-path`フラグを利用します。
 
-```
-> config path
-/home/jonathant/.config/nu/config.toml
+```nu
+config path
+# => /home/jonathant/.config/nu/config.toml
 ```
 
 ### ファイルから設定を読み込む
 
 デフォルトとは違う設定ファイルを読み込みたい場合は、`load` パラメーターを利用します。
 
-```
-> config load myconfiguration.toml
+```nu
+config load myconfiguration.toml
 ```
 
 ## Nu をログインシェルとして設定する
@@ -102,32 +102,32 @@ Nu をログインシェルとして利用するには、`path`と`env`変数を
 
 切り替える前に、Bash 等の別のシェルから Nu を実行します。そして次のコマンドで環境変数と PATH をシェルから取得します。
 
-```
-> config set path $nu.path
-> config set env $nu.env
+```nu
+config set path $nu.path
+config set env $nu.env
 ```
 
 0.7.2 より以前のバージョンでは
 
-```
-> config --set [path $nu:path]
-> config --set [env $nu:env]
+```nu
+config --set [path $nu:path]
+config --set [env $nu:env]
 ```
 
 `$nu.path`および`$nu.env`にはそれぞれ、現在の PATH と環境変数がセットされています。これらをセットすると、のちに Nu をログインシェルとして利用したさいに利用できるようになります。
 
 次にいくつかのディストリビューションでは、Nu が`/etc/shells`のリストに含まれているかを確認する必要があります。
 
-```
-❯ cat /etc/shells
-# /etc/shells: valid login shells
-/bin/sh
-/bin/dash
-/bin/bash
-/bin/rbash
-/usr/bin/screen
-/usr/bin/fish
-/home/sophia/.cargo/bin/nu
+```nu
+cat /etc/shells
+# => # /etc/shells: valid login shells
+# => /bin/sh
+# => /bin/dash
+# => /bin/bash
+# => /bin/rbash
+# => /usr/bin/screen
+# => /usr/bin/fish
+# => /home/sophia/.cargo/bin/nu
 ```
 
 これにより、`chsh`で Nu をログインシェルとして設定できるようになります。ログアウト後、次回のログイン時に Nu の素敵なプロンプトが表示されます。
@@ -137,7 +137,7 @@ Nu をログインシェルとして利用するには、`path`と`env`変数を
 プロンプトの設定は`prompt`の値を設定することで行います。  
 例えば、[starship](https://starship.rs)を使うには、ダウンロードして次のコマンドを実行します。(0.18.2 and later)
 
-```
+```nu
 config set prompt "starship prompt"
 ```
 

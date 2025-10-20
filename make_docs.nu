@@ -1,4 +1,3 @@
-
 def plugin-paths [ nu_path?: path ] {
     const PLUGINS = [
         nu_plugin_inc,
@@ -15,12 +14,17 @@ def plugin-paths [ nu_path?: path ] {
         _ => ($nu_path | path dirname)
     }
 
-    $PLUGINS | each {|plugin|
+    let plugin_paths = $PLUGINS | each {|plugin|
         match (sys host | get name) {
             'Windows' => $'($nu_dir | path join $plugin).exe'
             _ => $'($nu_dir | path join $plugin)'
         }
     }
+
+    let decorated = $plugin_paths | wrap path | insert exists {|x| $x.path | path exists }
+    $decorated | where not exists | each {|x| print $"(ansi red)No plugin under path '($x.path)', will be skipped...(ansi reset)" }
+
+    $decorated | where exists | get path
 }
 
 # get all command names from a clean scope
@@ -75,6 +79,8 @@ def make_docs [
 #   Various commands for working with bits.
 # usage: |
 #   Various commands for working with bits.
+# editLink: false      # turns off the "Edit this page in GitHub for commands"
+# contributors: false  # turns off the contributors list since it is not accurate for commands
 # ---
 # ```
 # - the `dfr min` command in `commands/docs/dfr_min.md`
@@ -92,6 +98,8 @@ def make_docs [
 # usage: |
 #   Creates a min expression
 #   Aggregates columns to their min value
+# editLink: false
+# contributors: false
 # ---
 # ```
 def command-frontmatter [commands_group, command_name] {
@@ -130,6 +138,8 @@ version: ($nu_version)
 ($category_matter)
 usage: |
 ($indented_usage)
+editLink: false
+contributors: false
 ---"
 }
 
@@ -169,11 +179,14 @@ def command-doc [command] {
 
     let flags = if $no_flags { '' } else {
         ($command.signatures | get $columns.0 | each { |param|
-            if $param.parameter_type == "switch" {
-                $" -  `--($param.parameter_name), -($param.short_flag)`: ($param.description)"
-            } else if $param.parameter_type == "named" {
-                $" -  `--($param.parameter_name), -($param.short_flag) {($param.syntax_shape)}`: ($param.description)"
-            }
+            let start = $' -  `--($param.parameter_name)'
+            let end = $'`: ($param.description)'
+            let short_flag = (if ($param.short_flag | is-empty) {''} else {$', -($param.short_flag)'})
+            if $param.parameter_type == 'switch' {
+                $'($start)($short_flag)($end)'
+            } else if $param.parameter_type == 'named' {
+                $'($start)($short_flag) {($param.syntax_shape)}($end)'
+	    }
         } | str join (char newline))
     }
 
@@ -234,10 +247,21 @@ $"## Notes
         # FIXME: Parentheses are required here to mutate $input_output, otherwise it won't work, maybe a bug?
         $input_output = ($input_output | append [[input output]; [$input $output]])
     }
-    let in_out = if ($input_output | length) > 0 {
-        let markdown = ($input_output | sort-by input | to md --pretty | str replace -a '<' '\<' | str replace -a '>' '\>')
-        ['', '## Input/output types:', '', $markdown, ''] | str join (char newline)
-    } else { '' }
+    # Input/output types: use help commands
+    let input_output_table = (
+        help commands
+        | where name == $command.name
+        | get input_output
+        | first
+        | to md --pretty
+        | str replace -a '<' '&lt;'
+        | str replace -a '>' '&gt;'
+    )
+    let in_out = if ($input_output_table | is-empty) {
+        ''
+    } else {
+        ['', '## Input/output types:', '', $input_output_table, ''] | str join (char newline)
+    }
 
     let examples = if ($command.examples | length) > 0 {
         let example_top = $"## Examples(char newline)(char newline)"
@@ -372,7 +396,12 @@ def generate-category [category] {
     let safe_name = ($category | safe-path)
     let doc_path = (['.', 'commands', 'categories', $'($safe_name).md'] | path join)
 
-$"# ($category | str title-case)
+$"---
+editLink: false
+contributors: false
+---
+
+# ($category | str title-case)
 
 <script>
   import pages from '@temp/pages'
@@ -389,14 +418,18 @@ $"# ($category | str title-case)
 </script>
 
 <table>
-  <tr>
-    <th>Command</th>
-    <th>Description</th>
-  </tr>
-  <tr v-for=\"command in commands\">
-   <td><a :href=\"$withBase\(command.path\)\">{{ command.title }}</a></td>
-   <td style=\"white-space: pre-wrap;\">{{ command.frontmatter.usage }}</td>
-  </tr>
+  <thead>
+    <tr>
+      <th>Command</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-for=\"command in commands\">
+       <td><a :href=\"$withBase\(command.path\)\">{{ command.title }}</a></td>
+       <td style=\"white-space: pre-wrap;\">{{ command.frontmatter.usage }}</td>
+    </tr>
+  </tbody>
 </table>
 "
     | save --raw --force $doc_path

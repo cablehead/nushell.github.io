@@ -95,13 +95,13 @@ row データ型は表の１行のデータで見えるものを表していま�
 
 Lists は一つ以上の値を保持できます。単純な値だけでなく、rows も保持することができます。rows の lists はしばしばテーブルと呼ばれます。
 
-```
-> echo [sam fred george]
-───┬────────
- 0 │ sam
- 1 │ fred
- 2 │ george
-───┴────────
+```nu
+echo [sam fred george]
+# => ───┬────────
+# =>  0 │ sam
+# =>  1 │ fred
+# =>  2 │ george
+# => ───┴────────
 ```
 
 ### Blocks

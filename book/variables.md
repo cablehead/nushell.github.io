@@ -10,31 +10,31 @@ After creating a variable, we can refer to it using `$` followed by its name.
 An immutable variable cannot change its value after declaration. They are declared using the `let` keyword,
 
 ```nu
-> let val = 42
-> $val
-42
-> $val = 100
-Error: nu::shell::assignment_requires_mutable_variable
-
-  × Assignment to an immutable variable.
-   ╭─[entry #10:1:1]
- 1 │ $val = 100
-   · ──┬─
-   ·   ╰── needs to be a mutable variable
-   ╰────
+let val = 42
+$val
+# => 42
+$val = 100
+# => Error: nu::shell::assignment_requires_mutable_variable
+# => 
+# =>   × Assignment to an immutable variable.
+# =>    ╭─[entry #10:1:1]
+# =>  1 │ $val = 100
+# =>    · ──┬─
+# =>    ·   ╰── needs to be a mutable variable
+# =>    ╰────
 ```
 
 However, immutable variables can be 'shadowed'. Shadowing means that they are redeclared and their initial value cannot be used anymore within the same scope.
 
 ```nu
-> let val = 42                   # declare a variable
-> do { let val = 101;  $val }    # in an inner scope, shadow the variable
-101
-> $val                           # in the outer scope the variable remains unchanged
-42
-> let val = $val + 1             # now, in the outer scope, shadow the original variable
-> $val                           # in the outer scope, the variable is now shadowed, and
-43                               # its original value is no longer available.
+let val = 42                   # declare a variable
+do { let val = 101;  $val }    # in an inner scope, shadow the variable
+# => 101
+$val                           # in the outer scope the variable remains unchanged
+# => 42
+let val = $val + 1             # now, in the outer scope, shadow the original variable
+$val                           # in the outer scope, the variable is now shadowed, and
+# => 43                               # its original value is no longer available.
 ```
 
 ### Mutable Variables
@@ -42,10 +42,10 @@ However, immutable variables can be 'shadowed'. Shadowing means that they are re
 A mutable variable is allowed to change its value by assignment. These are declared using the `mut` keyword.
 
 ```nu
-> mut val = 42
-> $val += 27
-> $val
-69
+mut val = 42
+$val += 27
+$val
+# => 69
 ```
 
 There are a couple of assignment operators used with mutable variables
@@ -63,7 +63,8 @@ There are a couple of assignment operators used with mutable variables
 
 1. `+=`, `-=`, `*=` and `/=` are only valid in the contexts where their root operations are expected to work. For example, `+=` uses addition, so it can not be used for contexts where addition would normally fail
 2. `++=` requires that either the variable **or** the argument is a list.
-   :::
+
+:::
 
 #### More on Mutability
 
@@ -103,28 +104,28 @@ Many, if not most, use-cases for mutable variables in Nushell have a functional 
 For instance, loop counters are a common pattern for mutable variables and are built into most iterating commands. For example, you can get both each item and the index of each item using [`each`](/commands/docs/each.md) with [`enumerate`](/commands/docs/enumerate.md):
 
 ```nu
-> ls | enumerate | each { |elt| $"Item #($elt.index) is size ($elt.item.size)" }
-╭───┬───────────────────────────╮
-│ 0 │ Item #0 is size 812 B     │
-│ 1 │ Item #1 is size 3.4 KiB   │
-│ 2 │ Item #2 is size 11.0 KiB  │
-│ 3 │ ...                       │
-│ 4 │ Item #18 is size 17.8 KiB │
-│ 5 │ Item #19 is size 482 B    │
-│ 6 │ Item #20 is size 4.0 KiB  │
-╰───┴───────────────────────────╯
+ls | enumerate | each { |elt| $"Item #($elt.index) is size ($elt.item.size)" }
+# => ╭───┬───────────────────────────╮
+# => │ 0 │ Item #0 is size 812 B     │
+# => │ 1 │ Item #1 is size 3.4 KiB   │
+# => │ 2 │ Item #2 is size 11.0 KiB  │
+# => │ 3 │ ...                       │
+# => │ 4 │ Item #18 is size 17.8 KiB │
+# => │ 5 │ Item #19 is size 482 B    │
+# => │ 6 │ Item #20 is size 4.0 KiB  │
+# => ╰───┴───────────────────────────╯
 ```
 
 You can also use the [`reduce`](/commands/docs/reduce.md) command to work in the same way you might mutate a variable in a loop. For example, if you wanted to find the largest string in a list of strings, you might do:
 
 ```nu
-> [one, two, three, four, five, six] | reduce {|current_item, max|
-    if ($current_item | str length) > ($max | str length) {
-        $current_item
-    } else {
-        $max
-    }
+[one, two, three, four, five, six] | reduce {|current_item, max|
+  if ($current_item | str length) > ($max | str length) {
+      $current_item
+  } else {
+      $max
   }
+}
 
 three
 ```
@@ -132,7 +133,7 @@ three
 While `reduce` processes lists, the [`generate`](/commands/docs/generate.md) command can be used with arbitrary sources such as external REST APIs, also without requiring mutable variables. Here's an example that retrieves local weather data every hour and generates a continuous list from that data. The `each` command can be used to consume each new list item as it becomes available.
 
 ```nu
-generate khot {|weather_station|
+generate {|weather_station|
   let res = try {
     http get -ef $'https://api.weather.gov/stations/($weather_station)/observations/latest'
   } catch {
@@ -148,7 +149,7 @@ generate khot {|weather_station|
       next: $weather_station
     }
   }
-}
+} khot
 | each {|weather_report|
     {
       time: ($weather_report.properties.timestamp | into datetime)
@@ -202,13 +203,13 @@ Using [filter commands](/commands/categories/filters.html) with immutable variab
 
 Variable names in Nushell come with a few restrictions as to what characters they can contain. In particular, they cannot contain these characters:
 
-```
+```text
 .  [  (  {  +  -  *  ^  /  =  !  <  >  &  |
 ```
 
 It is common for some scripts to declare variables that start with `$`. This is allowed, and it is equivalent to the `$` not being there at all.
 
 ```nu
-> let $var = 42
+let $var = 42
 # identical to `let var = 42`
 ```
